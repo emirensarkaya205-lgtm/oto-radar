@@ -4,18 +4,18 @@ from bs4 import BeautifulSoup
 
 DB_FILE = "database.db"
 
-# Doğu Anadolu, Güneydoğu Anadolu, Kuzeydoğu ve Ankara Hattı
+# Doğu, Güneydoğu, Kuzeydoğu ve Ankara hattındaki şehirler
 REGIONS = [
     # Doğu & Kuzeydoğu Anadolu
     "ağrı", "agri", "erzurum", "kars", "iğdır", "igdir", "ardahan",
     "van", "muş", "mus", "bitlis", "hakkari", "erzincan", "tunceli",
     "bingöl", "bingol", "elazığ", "elazig", "malatya",
-    # Kuzeydoğu / Doğu Karadeniz geçişi
+    # Karadeniz / Kuzeydoğu bağlantısı
     "artvin", "rize", "trabzon", "gümüşhane", "gumushane", "bayburt",
     # Güneydoğu Anadolu
     "gaziantep", "diyarbakır", "diyarbakir", "şanlıurfa", "sanliurfa",
     "batman", "adıyaman", "adiyaman", "mardin", "siirt", "şırnak", "sirnak", "kilis",
-    # İç Anadolu bağlantı hattı (Ankara'ya kadar)
+    # İç Anadolu (Ankara'ya kadar)
     "sivas", "kayseri", "yozgat", "kırıkkale", "kirikkale", "ankara",
     "tokat", "amasya", "çorum", "corum", "kırşehir", "kirsehir", "nevşehir", "nevsehir"
 ]

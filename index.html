@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canlı Araç Radarı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SQLite dosyasını doğrudan tarayıcıda okumak için sql.js kütüphanesi -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-300 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Araç Takip Radarı</h1>
+        <p class="text-sm text-slate-500 mt-1">Clio • Bayon • i20 • Stonic • Egea • Egea Cross</p>
+      </div>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        GitHub Actions ile Güncelleniyor
+      </span>
+    </header>
+
+    <!-- Filtre Butonları -->
+    <div class="flex flex-wrap gap-2 my-6" id="filter-bar">
+      <button onclick="filterCategory('all')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-slate-900 text-white" data-cat="all">Tümü</button>
+      <button onclick="filterCategory('Renault Clio')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Renault Clio">Renault Clio</button>
+      <button onclick="filterCategory('Hyundai Bayon')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Hyundai Bayon">Hyundai Bayon</button>
+      <button onclick="filterCategory('Hyundai i20')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Hyundai i20">Hyundai i20</button>
+      <button onclick="filterCategory('Kia Stonic')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Kia Stonic">Kia Stonic</button>
+      <button onclick="filterCategory('Fiat Egea')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Fiat Egea">Fiat Egea</button>
+      <button onclick="filterCategory('Fiat Egea Cross')" class="filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700" data-cat="Fiat Egea Cross">Fiat Egea Cross</button>
+    </div>
+
+    <!-- İlan Kartları Alanı -->
+    <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="col-span-3 text-center py-16 text-slate-500">Veritabanı yükleniyor...</div>
+    </div>
+  </div>
+
+  <script>
+    let allData = [];
+
+    async function loadDatabase() {
+      const container = document.getElementById('cards-container');
+      try {
+        const SQL = await initSqlJs({
+          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
+
+        const response = await fetch('database.db?t=' + Date.now());
+        if (!response.ok) throw new Error("Henüz database.db oluşmamış.");
+
+        const buf = await response.arrayBuffer();
+        const db = new SQL.Database(new Uint8Array(buf));
+
+        const res = db.exec("SELECT model_category, title, price, location, url, created_at FROM listings ORDER BY created_at DESC");
+        
+        if (res.length > 0) {
+          const columns = res[0].columns;
+          allData = res[0].values.map(row => {
+            let obj = {};
+            columns.forEach((col, i) => obj[col] = row[i]);
+            return obj;
+          });
+          renderListings(allData);
+        } else {
+          container.innerHTML = `<div class="col-span-3 text-center py-16 text-slate-400">Veritabanında kayıtlı ilan bulunamadı.</div>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<div class="col-span-3 text-center py-16 text-amber-600">
+          İlanlar henüz hazır değil veya bot ilk çalıştırmasını tamamlamadı.<br>
+          <span class="text-xs text-slate-500 font-mono mt-2 block">${err.message}</span>
+        </div>`;
+      }
+    }
+
+    function filterCategory(cat) {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = "filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-slate-900 text-white";
+        } else {
+          btn.className = "filter-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-white border text-slate-700";
+        }
+      });
+
+      if (cat === 'all') {
+        renderListings(allData);
+      } else {
+        renderListings(allData.filter(item => item.model_category === cat));
+      }
+    }
+
+    function renderListings(items) {
+      const container = document.getElementById('cards-container');
+      if (!items || items.length === 0) {
+        container.innerHTML = `<div class="col-span-3 text-center py-16 text-slate-400">Bu kategoriye ait ilan bulunamadı.</div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between hover:shadow-md transition">
+          <div>
+            <span class="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded">${item.model_category}</span>
+            <h2 class="text-base font-semibold text-slate-900 mt-2 line-clamp-2">${item.title}</h2>
+            <p class="text-xs text-slate-500 mt-2">${item.location}</p>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-lg font-bold text-slate-900">${item.price}</span>
+            <a href="${item.url}" target="_blank" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">İlana Git →</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    loadDatabase();
+  </script>
+</body>
+</html>

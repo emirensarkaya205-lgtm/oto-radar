@@ -25,8 +25,9 @@ ALLOWED_CITIES = [
 
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("DROP TABLE IF EXISTS listings")
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS listings (
+            CREATE TABLE listings (
                 id TEXT PRIMARY KEY,
                 model_category TEXT,
                 title TEXT,

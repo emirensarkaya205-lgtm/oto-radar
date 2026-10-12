@@ -1,10 +1,10 @@
 import sqlite3
-import requests
+from curl_cffi import requests
 from bs4 import BeautifulSoup
 
 DB_FILE = "database.db"
 
-# Doğu, Güneydoğu, Kuzeydoğu ve Ankara hattındaki şehirler
+# Doğu Anadolu, Güneydoğu Anadolu, Kuzeydoğu ve Ankara hattı şehirleri
 REGIONS = [
     # Doğu & Kuzeydoğu Anadolu
     "ağrı", "agri", "erzurum", "kars", "iğdır", "igdir", "ardahan",
@@ -15,7 +15,7 @@ REGIONS = [
     # Güneydoğu Anadolu
     "gaziantep", "diyarbakır", "diyarbakir", "şanlıurfa", "sanliurfa",
     "batman", "adıyaman", "adiyaman", "mardin", "siirt", "şırnak", "sirnak", "kilis",
-    # İç Anadolu (Ankara'ya kadar)
+    # İç Anadolu bağlantı hattı (Ankara'ya kadar)
     "sivas", "kayseri", "yozgat", "kırıkkale", "kirikkale", "ankara",
     "tokat", "amasya", "çorum", "corum", "kırşehir", "kirsehir", "nevşehir", "nevsehir"
 ]
@@ -28,11 +28,6 @@ TARGETS = [
     {"name": "Fiat Egea", "url": "https://www.arabam.com/ikinci-el/otomobil/fiat-egea?gear=2&price_max=1200000&take=50"},
     {"name": "Fiat Egea Cross", "url": "https://www.arabam.com/ikinci-el/otomobil/fiat-egea-cross?gear=2&price_max=1200000&take=50"}
 ]
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Accept-Language": "tr-TR,tr;q=0.9"
-}
 
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
@@ -64,9 +59,11 @@ def scrape():
         print(f"--> [{model}] taranıyor...")
 
         try:
-            res = requests.get(url, headers=HEADERS, timeout=25)
+            # Gerçek Chrome tarayıcı parmak izi ile 403 engelini atlatma
+            res = requests.get(url, impersonate="chrome120", timeout=25)
+            print(f"[{model}] Yanıt: {res.status_code}")
+            
             if res.status_code != 200:
-                print(f"Hata: {res.status_code}")
                 continue
 
             soup = BeautifulSoup(res.text, "html.parser")

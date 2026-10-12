@@ -29,13 +29,20 @@ def init_db():
         """)
 
 async def scrape_category(page, model_name, url):
-    print(f"--> {model_name} taranıyor...")
+    print(f"--> [{model_name}] taranıyor...")
+    results = []
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        await asyncio.sleep(random.uniform(2, 4))
+        response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        await asyncio.sleep(random.uniform(3, 5))
+
+        # Cloudflare / Doğrulama kontrolü
+        title = await page.title()
+        if "Olağandışı" in title or "Güvenlik" in title or "Shield" in title:
+            print(f"[UYARI] {model_name} bot doğrulamasına takıldı.")
+            return []
 
         rows = await page.query_selector_all("tr.searchResultsItem:not(.nativeAd)")
-        results = []
+        print(f"Bulunan satır sayısı ({model_name}): {len(rows)}")
 
         for row in rows:
             row_id = await row.get_attribute("data-id")
@@ -47,51 +54,65 @@ async def scrape_category(page, model_name, url):
             loc_el = await row.query_selector("td.searchResultsLocationValue")
 
             if title_el and price_el:
-                title = (await title_el.inner_text()).strip()
+                title_txt = (await title_el.inner_text()).strip()
                 href = await title_el.get_attribute("href")
-                price = (await price_el.inner_text()).strip().replace("\n", " ")
-                location = (await loc_el.inner_text()).strip().replace("\n", " ") if loc_el else "Belirtilmemiş"
+                price_txt = (await price_el.inner_text()).strip().replace("\n", " ")
+                loc_txt = (await loc_el.inner_text()).strip().replace("\n", " ") if loc_el else "Belirtilmemiş"
 
                 results.append((
                     row_id,
                     model_name,
-                    title,
-                    price,
-                    location,
+                    title_txt,
+                    price_txt,
+                    loc_txt,
                     f"https://www.sahibinden.com{href}"
                 ))
-        return results
     except Exception as e:
-        print(f"Hata ({model_name}): {e}")
-        return []
+        print(f"Hata oluştu ({model_name}): {e}")
+    return results
 
 async def run_scraper():
     init_db()
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            viewport={"width": 1366, "height": 768},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox"
+            ]
         )
+        context = await browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            locale="tr-TR",
+            timezone_id="Europe/Istanbul"
+        )
+        
+        # Otomasyon tespitini gizleme
+        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
         page = await context.new_page()
 
         all_items = []
         for model_name, url in TARGET_URLS.items():
             items = await scrape_category(page, model_name, url)
             all_items.extend(items)
-            await asyncio.sleep(random.uniform(3, 5))
+            await asyncio.sleep(random.uniform(4, 7))
 
         await browser.close()
 
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.executemany("""
-                INSERT INTO listings (id, model_category, title, price, location, url)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    price = excluded.price,
-                    location = excluded.location
-            """, all_items)
-        print(f"Bitti! Toplam {len(all_items)} ilan kaydedildi.")
+        if all_items:
+            with sqlite3.connect(DB_FILE) as conn:
+                conn.executemany("""
+                    INSERT INTO listings (id, model_category, title, price, location, url)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        price = excluded.price,
+                        location = excluded.location
+                """, all_items)
+            print(f"Başarılı! Toplam {len(all_items)} ilan kaydedildi.")
+        else:
+            print("Hiç ilan kaydedilemedi.")
 
 if __name__ == "__main__":
     asyncio.run(run_scraper())

@@ -1,15 +1,23 @@
 import sqlite3
 import requests
 from bs4 import BeautifulSoup
-import urllib.parse
 
 DB_FILE = "database.db"
 
-# Ağrı'dan Ankara'ya kadar uzanan güzergah şehirleri (plaka kodları veya isim eşleşmeleri)
-CITIES = [
-    "Ağrı", "Erzurum", "Erzincan", "Sivas", "Kayseri", "Yozgat", 
-    "Kırıkkale", "Ankara", "Kars", "Iğdır", "Muş", "Van", "Malatya", 
-    "Elazığ", "Tokat", "Amasya", "Çorum", "Kırşehir", "Nevşehir"
+# Doğu Anadolu, Güneydoğu Anadolu, Kuzeydoğu ve Ankara Hattı
+REGIONS = [
+    # Doğu & Kuzeydoğu Anadolu
+    "ağrı", "agri", "erzurum", "kars", "iğdır", "igdir", "ardahan",
+    "van", "muş", "mus", "bitlis", "hakkari", "erzincan", "tunceli",
+    "bingöl", "bingol", "elazığ", "elazig", "malatya",
+    # Kuzeydoğu / Doğu Karadeniz geçişi
+    "artvin", "rize", "trabzon", "gümüşhane", "gumushane", "bayburt",
+    # Güneydoğu Anadolu
+    "gaziantep", "diyarbakır", "diyarbakir", "şanlıurfa", "sanliurfa",
+    "batman", "adıyaman", "adiyaman", "mardin", "siirt", "şırnak", "sirnak", "kilis",
+    # İç Anadolu bağlantı hattı (Ankara'ya kadar)
+    "sivas", "kayseri", "yozgat", "kırıkkale", "kirikkale", "ankara",
+    "tokat", "amasya", "çorum", "corum", "kırşehir", "kirsehir", "nevşehir", "nevsehir"
 ]
 
 TARGETS = [
@@ -23,7 +31,6 @@ TARGETS = [
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "tr-TR,tr;q=0.9"
 }
 
@@ -64,7 +71,58 @@ def scrape():
 
             soup = BeautifulSoup(res.text, "html.parser")
             rows = soup.select("tr.listing-list-item")
-            print(f"Bulunan ilan ({model}): {len(rows)}")
+            print(f"Bulunan ({model}): {len(rows)}")
 
             for row in rows:
-                link_el = row.select_one("td.horizontal-half-paddings
+                link_el = row.select_one("td.horizontal-half-paddings a")
+                if not link_el:
+                    continue
+
+                href = link_el.get("href", "")
+                title = clean_text(link_el.get("title") or link_el.text)
+                row_id = row.get("id") or href
+
+                price_el = row.select_one("td.listing-price")
+                price = clean_text(price_el.text) if price_el else "Fiyat Belirtilmedi"
+
+                loc_el = row.select_one("td.listing-location-city")
+                loc = clean_text(loc_el.text) if loc_el else "Türkiye"
+
+                img_el = row.select_one("img")
+                img_src = ""
+                if img_el:
+                    img_src = img_el.get("src") or img_el.get("data-src") or ""
+                    img_src = img_src.replace("120x90", "580x435")
+
+                full_url = f"https://www.arabam.com{href}" if not href.startswith("http") else href
+
+                # Bölge filtresi kontrolü
+                loc_lower = loc.lower()
+                is_in_region = any(city in loc_lower for city in REGIONS)
+
+                if is_in_region:
+                    all_rows.append((
+                        str(row_id),
+                        model,
+                        title,
+                        price,
+                        loc,
+                        img_src,
+                        "Otomatik",
+                        full_url
+                    ))
+        except Exception as e:
+            print(f"Hata ({model}): {e}")
+
+    with sqlite3.connect(DB_FILE) as conn:
+        if all_rows:
+            conn.executemany("""
+                INSERT OR REPLACE INTO listings (id, model_category, title, price, location, image_url, gear_type, url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, all_rows)
+            print(f"Tamamlandı! İlgili bölgelerden {len(all_rows)} adet gerçek ilan kaydedildi.")
+        else:
+            print("İlgili bölgelerde anlık ilan bulunamadı.")
+
+if __name__ == "__main__":
+    scrape()

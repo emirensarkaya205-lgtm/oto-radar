@@ -1,9 +1,10 @@
-import asyncio
+import os
 import sqlite3
-import random
-from playwright.async_api import async_playwright
+import requests
+from bs4 import BeautifulSoup
 
 DB_FILE = "database.db"
+API_KEY = os.getenv("SCRAPER_API_KEY")
 
 TARGET_URLS = {
     "Renault Clio": "https://www.sahibinden.com/renault-clio",
@@ -28,36 +29,37 @@ def init_db():
             )
         """)
 
-async def scrape_category(page, model_name, url):
+def scrape_category(model_name, target_url):
     print(f"--> [{model_name}] taranıyor...")
     results = []
+    
+    # ScraperAPI üzerinden Cloudflare korumasını aşarak HTML alma
+    proxy_url = f"http://api.scraperapi.com?api_key={API_KEY}&url={target_url}&country_code=tr"
+    
     try:
-        response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        await asyncio.sleep(random.uniform(3, 5))
+        response = requests.get(proxy_url, timeout=60)
+        if response.status_code != 200:
+            print(f"Hata kodu ({model_name}): {response.status_code}")
+            return results
 
-        # Cloudflare / Doğrulama kontrolü
-        title = await page.title()
-        if "Olağandışı" in title or "Güvenlik" in title or "Shield" in title:
-            print(f"[UYARI] {model_name} bot doğrulamasına takıldı.")
-            return []
-
-        rows = await page.query_selector_all("tr.searchResultsItem:not(.nativeAd)")
+        soup = BeautifulSoup(response.text, "html.parser")
+        rows = soup.select("tr.searchResultsItem:not(.nativeAd)")
         print(f"Bulunan satır sayısı ({model_name}): {len(rows)}")
 
         for row in rows:
-            row_id = await row.get_attribute("data-id")
+            row_id = row.get("data-id")
             if not row_id:
                 continue
 
-            title_el = await row.query_selector("td.searchResultsTitleValue a")
-            price_el = await row.query_selector("td.searchResultsPriceValue")
-            loc_el = await row.query_selector("td.searchResultsLocationValue")
+            title_el = row.select_one("td.searchResultsTitleValue a")
+            price_el = row.select_one("td.searchResultsPriceValue")
+            loc_el = row.select_one("td.searchResultsLocationValue")
 
             if title_el and price_el:
-                title_txt = (await title_el.inner_text()).strip()
-                href = await title_el.get_attribute("href")
-                price_txt = (await price_el.inner_text()).strip().replace("\n", " ")
-                loc_txt = (await loc_el.inner_text()).strip().replace("\n", " ") if loc_el else "Belirtilmemiş"
+                title_txt = title_el.get_text(strip=True)
+                href = title_el.get("href", "")
+                price_txt = price_el.get_text(strip=True).replace("\n", " ")
+                loc_txt = loc_el.get_text(strip=True).replace("\n", " ") if loc_el else "Belirtilmemiş"
 
                 results.append((
                     row_id,
@@ -68,51 +70,33 @@ async def scrape_category(page, model_name, url):
                     f"https://www.sahibinden.com{href}"
                 ))
     except Exception as e:
-        print(f"Hata oluştu ({model_name}): {e}")
+        print(f"Hata ({model_name}): {e}")
+        
     return results
 
-async def run_scraper():
+def run():
     init_db()
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox"
-            ]
-        )
-        context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-            locale="tr-TR",
-            timezone_id="Europe/Istanbul"
-        )
-        
-        # Otomasyon tespitini gizleme
-        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        
-        page = await context.new_page()
+    if not API_KEY:
+        print("HATA: SCRAPER_API_KEY tanımlanmamış!")
+        return
 
-        all_items = []
-        for model_name, url in TARGET_URLS.items():
-            items = await scrape_category(page, model_name, url)
-            all_items.extend(items)
-            await asyncio.sleep(random.uniform(4, 7))
+    all_items = []
+    for model_name, url in TARGET_URLS.items():
+        items = scrape_category(model_name, url)
+        all_items.extend(items)
 
-        await browser.close()
-
-        if all_items:
-            with sqlite3.connect(DB_FILE) as conn:
-                conn.executemany("""
-                    INSERT INTO listings (id, model_category, title, price, location, url)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        price = excluded.price,
-                        location = excluded.location
-                """, all_items)
-            print(f"Başarılı! Toplam {len(all_items)} ilan kaydedildi.")
-        else:
-            print("Hiç ilan kaydedilemedi.")
+    if all_items:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.executemany("""
+                INSERT INTO listings (id, model_category, title, price, location, url)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    price = excluded.price,
+                    location = excluded.location
+            """, all_items)
+        print(f"Başarılı! Toplam {len(all_items)} ilan kaydedildi.")
+    else:
+        print("Hiç ilan kaydedilemedi.")
 
 if __name__ == "__main__":
-    asyncio.run(run_scraper())
+    run()

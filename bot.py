@@ -33,11 +33,16 @@ def scrape_category(model_name, target_url):
     print(f"--> [{model_name}] taranıyor...")
     results = []
     
-    # ScraperAPI üzerinden Cloudflare korumasını aşarak HTML alma
-    proxy_url = f"http://api.scraperapi.com?api_key={API_KEY}&url={target_url}&country_code=tr"
+    # ScraperAPI Türkiye IP ve Cloudflare aşma parametreleri
+    params = {
+        'api_key': API_KEY,
+        'url': target_url,
+        'country_code': 'tr',
+        'render': 'false'
+    }
     
     try:
-        response = requests.get(proxy_url, timeout=60)
+        response = requests.get('https://api.scraperapi.com/', params=params, timeout=60)
         if response.status_code != 200:
             print(f"Hata kodu ({model_name}): {response.status_code}")
             return results
@@ -77,7 +82,7 @@ def scrape_category(model_name, target_url):
 def run():
     init_db()
     if not API_KEY:
-        print("HATA: SCRAPER_API_KEY tanımlanmamış!")
+        print("HATA: SCRAPER_API_KEY bulunamadı!")
         return
 
     all_items = []
@@ -94,7 +99,7 @@ def run():
                     price = excluded.price,
                     location = excluded.location
             """, all_items)
-        print(f"Başarılı! Toplam {len(all_items)} ilan kaydedildi.")
+        print(f"Başarılı! Toplam {len(all_items)} ilan veritabanına yazıldı.")
     else:
         print("Hiç ilan kaydedilemedi.")
 

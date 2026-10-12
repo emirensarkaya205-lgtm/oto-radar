@@ -1,16 +1,18 @@
+import os
 import sqlite3
-from curl_cffi import requests
+import requests
 from bs4 import BeautifulSoup
 
 DB_FILE = "database.db"
+API_KEY = os.getenv("SCRAPER_API_KEY")
 
-# Doğu Anadolu, Güneydoğu Anadolu, Kuzeydoğu ve Ankara hattı şehirleri
+# Doğu, Güneydoğu, Kuzeydoğu ve İç Anadolu (Ankara hattı)
 REGIONS = [
     # Doğu & Kuzeydoğu Anadolu
     "ağrı", "agri", "erzurum", "kars", "iğdır", "igdir", "ardahan",
     "van", "muş", "mus", "bitlis", "hakkari", "erzincan", "tunceli",
     "bingöl", "bingol", "elazığ", "elazig", "malatya",
-    # Karadeniz / Kuzeydoğu bağlantısı
+    # Karadeniz / Kuzeydoğu geçişi
     "artvin", "rize", "trabzon", "gümüşhane", "gumushane", "bayburt",
     # Güneydoğu Anadolu
     "gaziantep", "diyarbakır", "diyarbakir", "şanlıurfa", "sanliurfa",
@@ -55,14 +57,20 @@ def scrape():
 
     for target in TARGETS:
         model = target["name"]
-        url = target["url"]
+        target_url = target["url"]
         print(f"--> [{model}] taranıyor...")
 
+        # ScraperAPI Türkiye proxy yönlendirmesi (Cloudflare 403 atlatma)
+        params = {
+            'api_key': API_KEY,
+            'url': target_url,
+            'country_code': 'tr'
+        }
+
         try:
-            # Gerçek Chrome tarayıcı parmak izi ile 403 engelini atlatma
-            res = requests.get(url, impersonate="chrome120", timeout=25)
-            print(f"[{model}] Yanıt: {res.status_code}")
-            
+            res = requests.get('https://api.scraperapi.com/', params=params, timeout=60)
+            print(f"[{model}] Yanıt Kodu: {res.status_code}")
+
             if res.status_code != 200:
                 continue
 
@@ -85,15 +93,17 @@ def scrape():
                 loc_el = row.select_one("td.listing-location-city")
                 loc = clean_text(loc_el.text) if loc_el else "Türkiye"
 
+                # Gerçek Orijinal Araç Fotoğrafı
                 img_el = row.select_one("img")
                 img_src = ""
                 if img_el:
                     img_src = img_el.get("src") or img_el.get("data-src") or ""
+                    # Küçük önizleme boyutunu yüksek çözünürlüğe çevir
                     img_src = img_src.replace("120x90", "580x435")
 
                 full_url = f"https://www.arabam.com{href}" if not href.startswith("http") else href
 
-                # Bölge filtresi kontrolü
+                # Doğu, Güneydoğu, Kuzeydoğu ve Ankara hattı şehir kontrolü
                 loc_lower = loc.lower()
                 is_in_region = any(city in loc_lower for city in REGIONS)
 
@@ -117,7 +127,7 @@ def scrape():
                 INSERT OR REPLACE INTO listings (id, model_category, title, price, location, image_url, gear_type, url)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, all_rows)
-            print(f"Tamamlandı! İlgili bölgelerden {len(all_rows)} adet gerçek ilan kaydedildi.")
+            print(f"Tamamlandı! Belirlenen bölgelerden {len(all_rows)} adet gerçek fotoğraflı ilan kaydedildi.")
         else:
             print("İlgili bölgelerde anlık ilan bulunamadı.")
 

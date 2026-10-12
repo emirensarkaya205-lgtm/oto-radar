@@ -9,38 +9,33 @@
 </head>
 <body class="bg-slate-100 text-slate-800 p-4 md:p-8">
   <div class="max-w-7xl mx-auto">
-    <!-- Header -->
     <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-300 gap-4">
       <div>
         <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Ağrı - Ankara Otomatik Araç Radarı</h1>
         <p class="text-sm text-slate-600 mt-1 flex flex-wrap items-center gap-2">
           <span class="bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded text-xs">Sadece Otomatik Vites</span>
           <span class="bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded text-xs">Maks: 1.200.000 TL</span>
-          <span class="bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded text-xs">Ağrı → Ankara Hattı</span>
+          <span class="bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded text-xs">Ağrı → Ankara Güzergahı</span>
         </p>
       </div>
-      <div class="flex items-center gap-3">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          Canlı Takip Aktif
-        </span>
-      </div>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Canlı Takip Aktif
+      </span>
     </header>
 
-    <!-- Model Filtreleri -->
     <div class="flex flex-wrap gap-2 my-6" id="filter-bar">
-      <button onclick="filterCategory('all')" class="filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm transition" data-cat="all">Tümü</button>
-      <button onclick="filterCategory('Renault Clio')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Renault Clio">Renault Clio</button>
-      <button onclick="filterCategory('Hyundai Bayon')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Hyundai Bayon">Hyundai Bayon</button>
-      <button onclick="filterCategory('Hyundai i20')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Hyundai i20">Hyundai i20</button>
-      <button onclick="filterCategory('Kia Stonic')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Kia Stonic">Kia Stonic</button>
-      <button onclick="filterCategory('Fiat Egea')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Fiat Egea">Fiat Egea</button>
-      <button onclick="filterCategory('Fiat Egea Cross')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition" data-cat="Fiat Egea Cross">Fiat Egea Cross</button>
+      <button onclick="filterCategory('all')" class="filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm" data-cat="all">Tümü</button>
+      <button onclick="filterCategory('Renault Clio')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Renault Clio">Renault Clio</button>
+      <button onclick="filterCategory('Hyundai Bayon')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Hyundai Bayon">Hyundai Bayon</button>
+      <button onclick="filterCategory('Hyundai i20')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Hyundai i20">Hyundai i20</button>
+      <button onclick="filterCategory('Kia Stonic')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Kia Stonic">Kia Stonic</button>
+      <button onclick="filterCategory('Fiat Egea')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Fiat Egea">Fiat Egea</button>
+      <button onclick="filterCategory('Fiat Egea Cross')" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700" data-cat="Fiat Egea Cross">Fiat Egea Cross</button>
     </div>
 
-    <!-- İlan Kartları Grid -->
     <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <div class="col-span-full text-center py-20 text-slate-500">İlanlar ve fotoğraflar yükleniyor...</div>
+      <div class="col-span-full text-center py-20 text-slate-500">İlanlar ve orijinal fotoğraflar yükleniyor...</div>
     </div>
   </div>
 
@@ -60,7 +55,7 @@
         const buf = await response.arrayBuffer();
         const db = new SQL.Database(new Uint8Array(buf));
 
-        const res = db.exec("SELECT model_category, title, price, location, image_url, gear_type, url FROM listings ORDER BY id DESC");
+        const res = db.exec("SELECT model_category, title, price, location, image_url, gear_type, url FROM listings");
         
         if (res.length > 0) {
           const columns = res[0].columns;
@@ -71,57 +66,54 @@
           });
           renderListings(allData);
         } else {
-          container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">Filtreye uygun ilan bulunamadı.</div>`;
+          container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">Veritabanında kayıtlı ilan bulunamadı.</div>`;
         }
       } catch (err) {
-        container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">İlanlar güncelleniyor, lütfen birkaç saniye sonra tekrar deneyin.</div>`;
+        container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">Veritabanı güncelleniyor, lütfen 1 dakika sonra sayfayı yenileyin.</div>`;
       }
     }
 
     function filterCategory(cat) {
       document.querySelectorAll('.filter-btn').forEach(btn => {
         if (btn.dataset.cat === cat) {
-          btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm transition";
+          btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm";
         } else {
-          btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition";
+          btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-700";
         }
       });
 
       if (cat === 'all') {
         renderListings(allData);
       } else {
-        renderListings(allData.filter(item => item.model_category === cat));
+        renderListings(allData.filter(item => item.model_category.toLowerCase() === cat.toLowerCase()));
       }
     }
 
     function renderListings(items) {
       const container = document.getElementById('cards-container');
       if (!items || items.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">Bu kategoriye uygun araç bulunamadı.</div>`;
+        container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">Bu modele uygun ilan bulunamadı.</div>`;
         return;
       }
 
       container.innerHTML = items.map(item => {
-        const fallbackImg = "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80";
-        const carImg = item.image_url ? item.image_url : fallbackImg;
+        const fallback = "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80";
+        const img = item.image_url ? item.image_url : fallback;
 
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between group">
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg transition flex flex-col justify-between">
             <div>
-              <!-- Fotoğraf Alanı -->
               <div class="relative h-48 w-full bg-slate-100 overflow-hidden">
-                <img src="${carImg}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='${fallbackImg}'">
-                <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
+                <img src="${img}" alt="${item.title}" class="w-full h-full object-cover" onerror="this.src='${fallback}'">
+                <span class="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
                   ${item.model_category}
                 </span>
-                <span class="absolute bottom-3 right-3 bg-emerald-600/90 text-white text-xs font-semibold px-2 py-0.5 rounded">
+                <span class="absolute bottom-3 right-3 bg-emerald-600 text-white text-xs font-semibold px-2 py-0.5 rounded">
                   ${item.gear_type || 'Otomatik'}
                 </span>
               </div>
-
-              <!-- Bilgiler -->
               <div class="p-4">
-                <h2 class="text-base font-semibold text-slate-900 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
+                <h2 class="text-base font-semibold text-slate-900 line-clamp-2 leading-snug">
                   ${item.title}
                 </h2>
                 <div class="mt-2.5 flex items-center text-xs text-slate-500 font-medium">
@@ -130,16 +122,13 @@
                 </div>
               </div>
             </div>
-
-            <!-- Fiyat ve Buton -->
             <div class="p-4 pt-2 border-t border-slate-100 flex items-center justify-between">
               <div>
                 <span class="text-xs text-slate-400 block font-medium">Fiyat</span>
                 <span class="text-lg font-bold text-slate-900">${item.price}</span>
               </div>
-              <a href="${item.url}" target="_blank" class="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-all">
-                İlana Git
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              <a href="${item.url}" target="_blank" class="bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+                İlana Git →
               </a>
             </div>
           </div>
